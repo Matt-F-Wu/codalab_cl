@@ -309,3 +309,47 @@ def mimic_bundles(
                 )
 
     return plan
+
+
+# A helper function that returns the uuids of parents of a bundle
+# by extracting from bundle info.
+def get_parents(client, bundle_info):
+    parent_ids = []
+    
+    for dep in bundle_info['dependencies']:
+        parent_uuid = dep['parent_uuid']
+        parent_ids.append(parent_uuid)
+
+    return parent_ids
+
+# A DFS traversal that performs an operation pre-order at each node.
+def DFS(client, node, operation, depth_left):
+    # Exceeded the maximum depth of this traversal
+    if depth_left == 0:
+        return
+
+    info = client.fetch('bundles', node)
+    operation((node, info), depth_left)
+    depth_left -= 1
+    for parent in get_parents(client, info):
+        DFS(client, parent, operation, depth_left)
+
+    return
+
+
+# The max_depth defaults to 5, as the results likely can't be
+# presented in a clean/clear manner if we go any deeper.
+def get_bundle_ancestors(client, bundle_uuid, max_depth=5):
+    # Return an inverted tree where the parent is a downstream bundle
+    # and the children are the immediate upstream bunble.
+    
+    # DFS ordering of a bundle's ancestors
+    ancestors_DFS_ordering = []
+
+    def operation(bundle, depth):
+        ancestors_DFS_ordering.append(
+            (bundle[0], bundle[1].get('metadata', {}).get('name'), depth))
+
+    DFS(client, bundle_uuid, operation, max_depth)
+
+    return ancestors_DFS_ordering

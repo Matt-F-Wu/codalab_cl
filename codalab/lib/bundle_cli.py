@@ -124,6 +124,7 @@ BUNDLE_COMMANDS = (
     'write',
     'mount',
     'netcat',
+    'ancestors'
 )
 
 WORKSHEET_COMMANDS = ('new', 'add', 'wadd', 'work', 'print', 'wedit', 'wrm', 'wls')
@@ -2040,6 +2041,44 @@ class BundleCLI(object):
         # Headless client should fire OpenBundle UI action if no special flags used
         if self.headless and not (args.field or args.raw or args.verbose):
             return ui_actions.serialize([ui_actions.OpenBundle(bundle['id']) for bundle in bundles])
+
+    ### Hao's Implementation of ancestors command
+    @Commands.command(
+        'ancestors',
+        help='Print the ancestor bundles of a run bundle',
+        arguments=(
+            Commands.Argument(
+                'bundle_spec', help=BUNDLE_SPEC_FORMAT, nargs='+', completer=BundlesCompleter
+            ),
+            Commands.Argument(
+                '-w',
+                '--worksheet-spec',
+                help='Operate on this worksheet (%s).' % WORKSHEET_SPEC_FORMAT,
+                completer=WorksheetsCompleter,
+            ),
+            Commands.Argument(
+                '-d',
+                '--depth',
+                help='Maximum depth of the ancestor traversal.',
+                type=int,
+                default=5
+            ),
+        ),
+    )
+    def do_ancestors_command(self, args):
+        args.bundle_spec = spec_util.expand_specs(args.bundle_spec)
+        client, worksheet_uuid = self.parse_client_worksheet_uuid(args.worksheet_spec)
+        bundle_uuids = self.target_specs_to_bundle_uuids(client, worksheet_uuid, args.bundle_spec)
+
+        if len(bundle_uuids) != 1:
+            print >>self.stderr, 'This command only takes one bundle ID as argument.'
+            return
+
+        ancestors = bundle_util.get_bundle_ancestors(
+                client, bundle_uuids[0], args.depth)
+        for ancestor_id, ancestor_name, depth in ancestors:
+            print '  ' * (args.depth - depth), '-', ancestor_name, '({})'.format(ancestor_id[:8])
+
 
     @staticmethod
     def key_value_str(key, value):
