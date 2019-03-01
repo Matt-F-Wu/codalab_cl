@@ -2045,7 +2045,7 @@ class BundleCLI(object):
     ### Hao's Implementation of ancestors command
     @Commands.command(
         'ancestors',
-        help='Print the ancestor bundles of a run bundle',
+        help='Print the ancestor bundles of a bundle',
         arguments=(
             Commands.Argument(
                 'bundle_spec', help=BUNDLE_SPEC_FORMAT, nargs='+', completer=BundlesCompleter
